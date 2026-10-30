@@ -1,0 +1,33 @@
+{
+  "name": "security-headers-checker",
+  "version": "0.1.0",
+  "description": "HTTP güvenlik başlıklarını denetleyen, puanlayan ve GitHub Actions olarak çalışan Bun CLI.",
+  "type": "module",
+  "bin": {
+    "security-headers": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "bun src/cli.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "security",
+    "headers",
+    "csp",
+    "hsts",
+    "cli",
+    "bun",
+    "github-action"
+  ],
+  "author": "Tarık Tozlu (@Tarikdxd)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tarikdxd/security-headers-checker.git"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.9.0"
+  }
+}

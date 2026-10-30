@@ -1,0 +1,25 @@
+name: 'Security Headers Checker'
+description: 'HTTP güvenlik başlıklarını denetler, puanlar ve eşik altında işi başarısız kılar.'
+author: 'Tarık Tozlu (@Tarikdxd)'
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  url:
+    description: 'Denetlenecek URL (https:// ile veya alan adı olarak)'
+    required: true
+  fail-under:
+    description: 'Bu puanın altında iş başarısız olur (0-100)'
+    required: false
+    default: '70'
+
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    - shell: bash
+      working-directory: ${{ github.action_path }}
+      run: bun src/cli.ts "${{ inputs.url }}" --fail-under "${{ inputs.fail-under }}"
