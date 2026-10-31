@@ -4,7 +4,7 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![bun](https://img.shields.io/badge/runtime-bun-black?logo=bun)](https://bun.sh)
 
-HTTP güvenlik başlıklarını denetleyen, ağırlıklı olarak puanlayan ve **GitHub Actions** olarak çalışabilen küçük bir CLI. Bağımlılık yok, tek dosyada çalışır, çıktısı hem insan hem makine içindir.
+HTTP güvenlik başlıklarını denetleyen, ağırlıklı olarak puanlayan ve **GitHub Actions** olarak çalışabilen küçük bir CLI. Bağımlılık yok, tek dosyada çalışır; insan, JSON ve SARIF 2.1.0 çıktısı verir.
 
 ```console
 $ security-headers https://example.com --fail-under 70
@@ -60,6 +60,7 @@ bunx github:Tarikdxd/security-headers-checker https://example.com
 ```sh
 security-headers https://example.com
 security-headers example.com --json
+security-headers example.com --sarif
 security-headers https://example.com --fail-under 80   # CI için
 security-headers https://example.com --timeout 5000 --no-color
 ```
@@ -73,6 +74,32 @@ security-headers https://example.com --timeout 5000 --no-color
 | `2` | Kullanım hatası veya istek başarısız |
 
 `--json` çıktısı tüm kontrolleri, ağırlıkları ve nihai puanı içerir; raporlara doğrudan gömülebilir.
+
+## SARIF ve Code Scanning
+
+`--sarif` çıktısı SARIF 2.1.0 üretir; her `warn`/`fail` kontrolü bir sonuç olur ve GitHub Code Scanning'de Security sekmesinde görünür. `--json` ile birlikte kullanılamaz.
+
+```yaml
+name: headers
+
+on: [pull_request]
+
+jobs:
+  headers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bunx github:Tarikdxd/security-headers-checker https://example.com --sarif > headers.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: headers.sarif
+```
+
+Action'ın `format: sarif` girdisi sonucu iş loglarına yazar; dosya yüklemek için yukarıdaki doğrudan CLI çağrısını kullan.
 
 ## GitHub Actions
 
@@ -90,13 +117,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: Tarikdxd/security-headers-checker@main
+      - uses: Tarikdxd/security-headers-checker@v0.2.0
         with:
           url: https://example.com
           fail-under: '70'
+          format: text   # text | json | sarif
 ```
 
-Action çıktısı işin loglarına yazılır ve puan eşiğin altındaysa iş kırmızı olur. Sürüm sabitlemek için `@v0.1.0` etiketini kullan.
+Action çıktısı işin loglarına yazılır ve puan eşiğin altındaysa iş kırmızı olur. Sürüm sabitlemek için `@v0.2.0` etiketini kullan.
 
 ## Geliştirme
 

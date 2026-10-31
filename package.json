@@ -1,6 +1,6 @@
 {
   "name": "security-headers-checker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "HTTP güvenlik başlıklarını denetleyen, puanlayan ve GitHub Actions olarak çalışan Bun CLI.",
   "type": "module",
   "bin": {

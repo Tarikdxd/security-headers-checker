@@ -13,6 +13,10 @@ inputs:
     description: 'Bu puanın altında iş başarısız olur (0-100)'
     required: false
     default: '70'
+  format:
+    description: 'Çıktı biçimi: text, json veya sarif'
+    required: false
+    default: 'text'
 
 runs:
   using: composite
@@ -22,4 +26,10 @@ runs:
         bun-version: latest
     - shell: bash
       working-directory: ${{ github.action_path }}
-      run: bun src/cli.ts "${{ inputs.url }}" --fail-under "${{ inputs.fail-under }}"
+      run: |
+        flags=()
+        case "${{ inputs.format }}" in
+          json) flags+=(--json) ;;
+          sarif) flags+=(--sarif) ;;
+        esac
+        bun src/cli.ts "${{ inputs.url }}" --fail-under "${{ inputs.fail-under }}" "${flags[@]}"
