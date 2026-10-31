@@ -119,7 +119,7 @@ export function toSarif(audit: Audit): Record<string, unknown> {
             name: 'security-headers-checker',
             informationUri:
               'https://github.com/Tarikdxd/security-headers-checker',
-            version: '0.2.0',
+            version: '0.3.0',
             rules,
           },
         },
