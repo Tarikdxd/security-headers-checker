@@ -1,13 +1,15 @@
 #!/usr/bin/env bun
 import { evaluate, headerMap } from './check.ts';
+import { toSarif } from './sarif.ts';
 
-const HELP = `security-headers-checker v0.1.0
+const HELP = `security-headers-checker v0.2.0
 
 Kullanım:
   security-headers <url> [seçenekler]
 
 Seçenekler:
   --json                 Sonucu JSON olarak yazdır
+  --sarif                Sonucu SARIF 2.1.0 olarak yazdır (Code Scanning)
   --fail-under <0-100>   Puan bu değerin altındaysa çıkış kodu 1 (varsayılan: 0)
   --timeout <ms>         İstek zaman aşımı (varsayılan: 10000)
   --no-color             Renkleri kapat
@@ -21,13 +23,21 @@ Seçenekler:
 interface Options {
   url: string;
   json: boolean;
+  sarif: boolean;
   failUnder: number;
   timeout: number;
   color: boolean;
 }
 
 function parseArgs(argv: string[]): Options | null {
-  const opts: Options = { url: '', json: false, failUnder: 0, timeout: 10_000, color: true };
+  const opts: Options = {
+    url: '',
+    json: false,
+    sarif: false,
+    failUnder: 0,
+    timeout: 10_000,
+    color: true,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     if (arg === '-h' || arg === '--help') {
@@ -35,11 +45,15 @@ function parseArgs(argv: string[]): Options | null {
       process.exit(0);
     }
     if (arg === '-v' || arg === '--version') {
-      console.log('0.1.0');
+      console.log('0.2.0');
       process.exit(0);
     }
     if (arg === '--json') {
       opts.json = true;
+      continue;
+    }
+    if (arg === '--sarif') {
+      opts.sarif = true;
       continue;
     }
     if (arg === '--no-color') {
@@ -75,6 +89,10 @@ function parseArgs(argv: string[]): Options | null {
     process.stderr.write(HELP);
     return null;
   }
+  if (opts.json && opts.sarif) {
+    console.error('hata: --json ve --sarif birlikte kullanılamaz');
+    return null;
+  }
   return opts;
 }
 
@@ -107,7 +125,9 @@ async function main(): Promise<void> {
   const audit = evaluate(url, response.url || url, headerMap(response.headers), response.status, setCookies);
   await response.body?.cancel().catch(() => undefined);
 
-  if (opts.json) {
+  if (opts.sarif) {
+    console.log(JSON.stringify(toSarif(audit), null, 2));
+  } else if (opts.json) {
     console.log(JSON.stringify(audit, null, 2));
   } else {
     const gradeColor = audit.score >= 80 ? '32' : audit.score >= 60 ? '33' : '31';
