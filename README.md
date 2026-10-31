@@ -61,6 +61,7 @@ bunx github:Tarikdxd/security-headers-checker https://example.com
 security-headers https://example.com
 security-headers example.com --json
 security-headers example.com --sarif
+security-headers example.com --json --output report.json
 security-headers https://example.com --fail-under 80   # CI için
 security-headers https://example.com --timeout 5000 --no-color
 ```
@@ -74,6 +75,8 @@ security-headers https://example.com --timeout 5000 --no-color
 | `2` | Kullanım hatası veya istek başarısız |
 
 `--json` çıktısı tüm kontrolleri, ağırlıkları ve nihai puanı içerir; raporlara doğrudan gömülebilir.
+
+`--output <path>` seçilen biçimi (text, JSON veya SARIF) dosyaya yazar; terminale yazmaz ve renk kullanmaz. Yazılamayan bir yol exit 2 ile raporlanır.
 
 ## SARIF ve Code Scanning
 
@@ -117,14 +120,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: Tarikdxd/security-headers-checker@v0.2.0
+      - uses: Tarikdxd/security-headers-checker@v0.3.0
         with:
           url: https://example.com
           fail-under: '70'
           format: text   # text | json | sarif
 ```
 
-Action çıktısı işin loglarına yazılır ve puan eşiğin altındaysa iş kırmızı olur. Sürüm sabitlemek için `@v0.2.0` etiketini kullan.
+Action çıktısı işin loglarına yazılır ve puan eşiğin altındaysa iş kırmızı olur. Sürüm sabitlemek için `@v0.3.0` etiketini kullan.
 
 ## Geliştirme
 

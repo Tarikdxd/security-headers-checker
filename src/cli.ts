@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
+import { writeFileSync } from 'node:fs';
 import { evaluate, headerMap } from './check.ts';
 import { toSarif } from './sarif.ts';
 
-const HELP = `security-headers-checker v0.2.0
+const HELP = `security-headers-checker v0.3.0
 
 Kullanım:
   security-headers <url> [seçenekler]
@@ -10,6 +11,7 @@ Kullanım:
 Seçenekler:
   --json                 Sonucu JSON olarak yazdır
   --sarif                Sonucu SARIF 2.1.0 olarak yazdır (Code Scanning)
+  --output <path>        Çıktıyı dosyaya yaz (renk yok)
   --fail-under <0-100>   Puan bu değerin altındaysa çıkış kodu 1 (varsayılan: 0)
   --timeout <ms>         İstek zaman aşımı (varsayılan: 10000)
   --no-color             Renkleri kapat
@@ -24,6 +26,7 @@ interface Options {
   url: string;
   json: boolean;
   sarif: boolean;
+  output: string;
   failUnder: number;
   timeout: number;
   color: boolean;
@@ -34,6 +37,7 @@ function parseArgs(argv: string[]): Options | null {
     url: '',
     json: false,
     sarif: false,
+    output: '',
     failUnder: 0,
     timeout: 10_000,
     color: true,
@@ -45,7 +49,7 @@ function parseArgs(argv: string[]): Options | null {
       process.exit(0);
     }
     if (arg === '-v' || arg === '--version') {
-      console.log('0.2.0');
+      console.log('0.3.0');
       process.exit(0);
     }
     if (arg === '--json') {
@@ -54,6 +58,15 @@ function parseArgs(argv: string[]): Options | null {
     }
     if (arg === '--sarif') {
       opts.sarif = true;
+      continue;
+    }
+    if (arg === '--output') {
+      const value = argv[++i];
+      if (!value) {
+        console.error('hata: --output bir dosya yolu gerektirir');
+        return null;
+      }
+      opts.output = value;
       continue;
     }
     if (arg === '--no-color') {
@@ -113,7 +126,7 @@ async function main(): Promise<void> {
     response = await fetch(url, {
       redirect: 'follow',
       signal: AbortSignal.timeout(opts.timeout),
-      headers: { 'user-agent': 'security-headers-checker/0.1' },
+      headers: { 'user-agent': 'security-headers-checker/0.3' },
     });
   } catch (error) {
     console.error(`hata: istek başarısız: ${(error as Error).message}`);
@@ -125,24 +138,40 @@ async function main(): Promise<void> {
   const audit = evaluate(url, response.url || url, headerMap(response.headers), response.status, setCookies);
   await response.body?.cancel().catch(() => undefined);
 
+  const outputColor = useColor && !opts.output;
+  let body: string;
   if (opts.sarif) {
-    console.log(JSON.stringify(toSarif(audit), null, 2));
+    body = `${JSON.stringify(toSarif(audit), null, 2)}\n`;
   } else if (opts.json) {
-    console.log(JSON.stringify(audit, null, 2));
+    body = `${JSON.stringify(audit, null, 2)}\n`;
   } else {
     const gradeColor = audit.score >= 80 ? '32' : audit.score >= 60 ? '33' : '31';
-    console.log('');
-    console.log(`  ${colorize(useColor, '1', audit.url)}`);
-    console.log(`  HTTP ${audit.httpStatus} · ${colorize(useColor, gradeColor, `${audit.score}/100 (${audit.grade})`)}`);
-    console.log('');
+    const lines = [
+      '',
+      `  ${colorize(outputColor, '1', audit.url)}`,
+      `  HTTP ${audit.httpStatus} · ${colorize(outputColor, gradeColor, `${audit.score}/100 (${audit.grade})`)}`,
+      '',
+    ];
     for (const check of audit.checks) {
       const symbol = check.status === 'pass' ? '✓' : check.status === 'warn' ? '!' : '✗';
       const symbolColor = check.status === 'pass' ? '32' : check.status === 'warn' ? '33' : '31';
-      console.log(
-        `  ${colorize(useColor, symbolColor, symbol)} ${check.title.padEnd(30)} ${check.detail}`,
+      lines.push(
+        `  ${colorize(outputColor, symbolColor, symbol)} ${check.title.padEnd(30)} ${check.detail}`,
       );
     }
-    console.log('');
+    lines.push('');
+    body = `${lines.join('\n')}\n`;
+  }
+
+  if (opts.output) {
+    try {
+      writeFileSync(opts.output, body, 'utf8');
+    } catch (error) {
+      console.error(`hata: ${opts.output} yazılamadı: ${(error as Error).message}`);
+      process.exit(2);
+    }
+  } else {
+    process.stdout.write(body);
   }
 
   if (audit.score < opts.failUnder) process.exit(1);
